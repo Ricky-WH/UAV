@@ -1,5 +1,5 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
-from Addmodules import *
+from .Addmodules import *
 import contextlib
 import pickle
 import re
@@ -1595,6 +1595,7 @@ def parse_model(d, ch, verbose=True):
             SCDown,
             C2fCIB,
             A2C2f,
+            SAMBackbone,
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1614,6 +1615,7 @@ def parse_model(d, ch, verbose=True):
             C2fCIB,
             C2PSA,
             A2C2f,
+            SAMBackbone,
         }
     )
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
