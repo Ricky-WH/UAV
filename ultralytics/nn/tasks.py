@@ -1595,7 +1595,6 @@ def parse_model(d, ch, verbose=True):
             SCDown,
             C2fCIB,
             A2C2f,
-            SAMBackbone,
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1615,7 +1614,6 @@ def parse_model(d, ch, verbose=True):
             C2fCIB,
             C2PSA,
             A2C2f,
-            SAMBackbone,
         }
     )
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
@@ -1664,6 +1662,8 @@ def parse_model(d, ch, verbose=True):
         elif m is ResNetLayer:
             c2 = args[1] if args[3] else args[1] * 4
         elif m is torch.nn.BatchNorm2d:
+            args = [ch[f]]
+        elif m is SAMBackbone:
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
