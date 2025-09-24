@@ -1,70 +1,127 @@
-from transformers import Sam2Config, Sam2Model
-import torch.nn as nn
+from typing import List, Optional
+
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 class SAMBackbone(nn.Module):
-    def __init__(self, _in_channels=None, ckpt="/root/Anti-UAV/sam2.1_hiera_large.pt"):
+    def __init__(self, in_channels=None, out_channels=512, ckpt=None):
         super().__init__()
+        self.out_channels = out_channels
+        self.ckpt = ckpt
 
-        # 手动创建模型配置
-        config = Sam2Config(
-            image_size=1024,
-            patch_size=16,
-            hidden_size=1280,
-            num_hidden_layers=40,
-            num_attention_heads=16,
-            intermediate_size=5120,
-            dropout_rate=0.0,
-            encoder_type="hiera"
-        )
+        # 延迟初始化 SAM 模型与投影头，首次 forward 根据实际通道创建
+        self.encoder = None
+        self.hidden_size = None
+        self.proj = None
 
-        # 初始化模型结构
-        self.sam2 = Sam2Model(config)
-
-        # 加载本地 checkpoint（兼容多种保存格式）；若不匹配则跳过
+    def _build_encoder(self):
         try:
-            loaded_obj = torch.load(ckpt, map_location="cpu") if ckpt is not None else None
+            from transformers import Sam2Config, Sam2Model
         except Exception as e:
-            loaded_obj = None
+            raise ImportError("transformers is required for SAMBackbone. Please install it via 'pip install transformers'.") from e
 
-        state_dict = None
-        if isinstance(loaded_obj, dict):
-            # 直接是权重字典
-            if any(isinstance(k, str) and (k.startswith("vision_encoder") or k.startswith("shared_image_embedding")) for k in loaded_obj.keys()):
-                state_dict = loaded_obj
-            # 常见嵌套 state_dict
-            elif "state_dict" in loaded_obj and isinstance(loaded_obj["state_dict"], dict):
-                sd = loaded_obj["state_dict"]
-                if any(isinstance(k, str) and (k.startswith("vision_encoder") or k.startswith("shared_image_embedding")) for k in sd.keys()):
-                    state_dict = sd
+        import os
+        sam2 = None
+        ckpt = self.ckpt
+        if ckpt:
+            try:
+                if os.path.isdir(ckpt) or (os.path.isfile(ckpt) and os.path.isfile(os.path.join(os.path.dirname(ckpt), "config.json"))):
+                    sam2 = Sam2Model.from_pretrained(ckpt, local_files_only=True)
+            except Exception:
+                sam2 = None
 
-        if state_dict is not None:
-            self.sam2.load_state_dict(state_dict, strict=False)
-        # 若无法识别或不匹配，则使用随机初始化继续
+        if sam2 is None:
+            config = None
+            state_dict = None
+            if ckpt and os.path.isfile(ckpt):
+                try:
+                    loaded = torch.load(ckpt, map_location="cpu")
+                except Exception:
+                    loaded = None
+                if isinstance(loaded, dict):
+                    cfg_dict = None
+                    for k in ("config", "cfg", "model_cfg", "model_args"):
+                        if k in loaded and isinstance(loaded[k], dict):
+                            cfg_dict = loaded[k]
+                            break
+                    if cfg_dict is not None:
+                        try:
+                            from transformers import Sam2Config as _Sam2Config
+                            config = _Sam2Config.from_dict(cfg_dict)
+                        except Exception:
+                            config = None
+                    if any(isinstance(k, str) and (k.startswith("vision_encoder") or k.startswith("shared_image_embedding")) for k in loaded.keys()):
+                        state_dict = loaded
+                    elif "state_dict" in loaded and isinstance(loaded["state_dict"], dict):
+                        sd = loaded["state_dict"]
+                        if any(isinstance(k, str) and (k.startswith("vision_encoder") or k.startswith("shared_image_embedding")) for k in sd.keys()):
+                            state_dict = sd
 
-        # 只取 vision_encoder（Sam2Model 使用 vision_encoder 命名）
-        self.encoder = getattr(self.sam2, "vision_encoder", None) or nn.Identity()
+            if config is None:
+                config = Sam2Config(
+                    image_size=1024,
+                    patch_size=16,
+                    hidden_size=1280,
+                    num_hidden_layers=40,
+                    num_attention_heads=16,
+                    intermediate_size=5120,
+                    dropout_rate=0.0,
+                    encoder_type="hiera",
+                )
+            sam2 = Sam2Model(config)
+            if state_dict is not None:
+                sam2.load_state_dict(state_dict, strict=False)
 
-    def forward(self, x):
-        with torch.no_grad():
-            enc_out = self.encoder(x)
+        self.encoder = getattr(sam2, "vision_encoder", None) or nn.Identity()
+        self.hidden_size = getattr(sam2.config, "hidden_size", None)
 
-        # 将 Sam2VisionEncoderOutput/字典/元组 转为张量
+    def forward(self, x: torch.Tensor):
+        if self.encoder is None:
+            self._build_encoder()
+
+        enc_out = self.encoder(x)
+
+        # 统一为 (B, C, H, W)
         if hasattr(enc_out, "last_hidden_state") and enc_out.last_hidden_state is not None:
-            x = enc_out.last_hidden_state
+            fx = enc_out.last_hidden_state
         elif hasattr(enc_out, "image_embeddings") and enc_out.image_embeddings is not None:
-            x = enc_out.image_embeddings
+            fx = enc_out.image_embeddings
         elif isinstance(enc_out, dict):
-            # 取第一个张量条目
+            fx = None
             for v in enc_out.values():
                 if torch.is_tensor(v):
-                    x = v
+                    fx = v
                     break
-            else:
-                x = enc_out.get("0", x)
+            fx = fx if fx is not None else enc_out.get("0", None)
         elif isinstance(enc_out, (list, tuple)) and len(enc_out) > 0:
-            x = enc_out[0]
+            fx = enc_out[0]
         else:
-            x = enc_out
+            fx = enc_out
 
-        return x
+        if fx.ndim == 3:  # (B, L, C)
+            b, l, c = fx.shape
+            g = int(l ** 0.5)
+            if g * g != l:
+                g = int(l ** 0.5)
+                gh = g
+                gw = max(1, l // max(1, gh))
+                fx = fx.transpose(1, 2).contiguous().view(b, c, gh, gw)
+            else:
+                fx = fx.transpose(1, 2).contiguous().view(b, c, g, g)
+        elif fx.ndim == 4 and self.hidden_size is not None and fx.shape[1] != self.hidden_size and fx.shape[-1] == self.hidden_size:
+            fx = fx.permute(0, 3, 1, 2).contiguous()
+
+        if self.proj is None:
+            in_ch = fx.shape[1]
+            self.hidden_size = in_ch
+            self.proj = nn.Sequential(
+                nn.Conv2d(in_ch, self.out_channels, kernel_size=1, bias=False),
+                nn.BatchNorm2d(self.out_channels),
+                nn.SiLU(),
+                nn.Conv2d(self.out_channels, self.out_channels, kernel_size=3, padding=1, bias=False),
+                nn.BatchNorm2d(self.out_channels),
+                nn.SiLU(),
+            ).to(fx.device, dtype=fx.dtype)
+
+        return self.proj(fx)
