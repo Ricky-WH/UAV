@@ -1663,6 +1663,8 @@ def parse_model(d, ch, verbose=True):
             c2 = args[1] if args[3] else args[1] * 4
         elif m is torch.nn.BatchNorm2d:
             args = [ch[f]]
+        elif m is MFC:
+            c2 = args[0]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
         elif m in frozenset(
