@@ -1,2 +1,2 @@
-from .SAMBackbone import *
+from .SwinTr import *
 from .MFC import *
