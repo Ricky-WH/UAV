@@ -1,10 +1,16 @@
+# --------------------------------------------------------
+# Swin Transformer V2
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Ze Liu
+# --------------------------------------------------------
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 import numpy as np
-from typing import List, Optional
 
 
 class Mlp(nn.Module):
@@ -625,25 +631,3 @@ class SwinTransformerV2(nn.Module):
         flops += self.num_features * self.patches_resolution[0] * self.patches_resolution[1] // (2 ** self.num_layers)
         flops += self.num_features * self.num_classes
         return flops
-
-if __name__ == "__main__":
-    # 模型实例化
-    model = SwinTransformerV2(
-        img_size=224,
-        patch_size=4,
-        in_chans=3,
-        num_classes=10,    # 比如分类 10 类
-        embed_dim=96,
-        depths=[2, 2, 6, 2],
-        num_heads=[3, 6, 12, 24],
-        window_size=7)
-
-    # 打印参数量
-    print("Model parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
-
-    # 构造一张假图片 (batch=1, 3×224×224)
-    x = torch.randn(1, 3, 224, 224)
-
-    # 前向
-    out = model(x)
-    print("Output shape:", out.shape)  # (1, 10)
