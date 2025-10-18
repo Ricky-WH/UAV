@@ -4,11 +4,11 @@ sys.path.append('/root/Anti-UAV/ultralytics')
 
 if __name__ == '__main__':
     # 加载模型
-    model = YOLO(r'/root/Anti-UAV/ultralytics/cfg/models/11/yolo11-sam.yaml', task="detect")  # 不使用预训练权重训练 | detect, segment, classify, pose, obb
+    model = YOLO(r'/Users/ricky-hang/study/Anti-UAV/Anti-UAV/ultralytics/cfg/models/11/yolo11-BLIP.yaml', task="detect")  # 不使用预训练权重训练 | detect, segment, classify, pose, obb
     # model = YOLO(r'yolov8.yaml').load("yolov8n.pt")  # 使用预训练权重训练
     # 训练参数 ----------------------------------------------------------------------------------------------
     model.train(
-        data=r'/root/Anti-UAV/datasets/DUT-Anti-UAV.yaml',
+        data=r'/Users/ricky-hang/study/Anti-UAV/Anti-UAV/datasets/DUT-Anti-UAV.yaml',
         epochs=300,  # (int) 训练的周期数
         patience=50,  # (int) 等待无明显改善以进行早期停止的周期数
         batch=32,  # (int) 每批次的图像数量（-1 为自动批处理）
@@ -19,7 +19,7 @@ if __name__ == '__main__':
         device='',  # (int | str | list, optional) 运行的设备，例如 cuda device=0 或 device=0,1,2,3 或 device=cpu
         workers=8,  # (int) 数据加载的工作线程数（每个DDP进程）
         project='runs/train',  # (str, optional) 项目名称
-        name='yolo11-sam',  # (str, optional) 实验名称，结果保存在'project/name'目录下
+        name='yolo11-BLIP',  # (str, optional) 实验名称，结果保存在'project/name'目录下
         exist_ok=False,  # (bool) 是否覆盖现有实验
         pretrained=True,  # (bool | str) 是否使用预训练模型（bool），或从中加载权重的模型（str）
         optimizer='SGD',  # (str) 要使用的优化器，选择=[SGD，Adam，Adamax，AdamW，NAdam，RAdam，RMSProp，auto]

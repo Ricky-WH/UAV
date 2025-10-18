@@ -1,2 +1,2 @@
-from .SwinTr import *
 from .MFC import *
+from .DHDetect import *
