@@ -344,44 +344,8 @@ class BaseModel(torch.nn.Module):
 
 
 class DetectionModel(BaseModel):
-    """
-    YOLO detection model.
-
-    This class implements the YOLO detection architecture, handling model initialization, forward pass,
-    augmented inference, and loss computation for object detection tasks.
-
-    Attributes:
-        yaml (dict): Model configuration dictionary.
-        model (torch.nn.Sequential): The neural network model.
-        save (list): List of layer indices to save outputs from.
-        names (dict): Class names dictionary.
-        inplace (bool): Whether to use inplace operations.
-        end2end (bool): Whether the model uses end-to-end detection.
-        stride (torch.Tensor): Model stride values.
-
-    Methods:
-        __init__: Initialize the YOLO detection model.
-        _predict_augment: Perform augmented inference.
-        _descale_pred: De-scale predictions following augmented inference.
-        _clip_augmented: Clip YOLO augmented inference tails.
-        init_criterion: Initialize the loss criterion.
-
-    Examples:
-        Initialize a detection model
-        >>> model = DetectionModel("yolo11n.yaml", ch=3, nc=80)
-        >>> results = model.predict(image_tensor)
-    """
 
     def __init__(self, cfg="yolo11n.yaml", ch=3, nc=None, verbose=True):
-        """
-        Initialize the YOLO detection model with the given config and parameters.
-
-        Args:
-            cfg (str | dict): Model configuration file path or dictionary.
-            ch (int): Number of input channels.
-            nc (int, optional): Number of classes.
-            verbose (bool): Whether to display model information.
-        """
         super().__init__()
         self.yaml = cfg if isinstance(cfg, dict) else yaml_model_load(cfg)  # cfg dict
         if self.yaml["backbone"][0][2] == "Silence":
@@ -1663,8 +1627,6 @@ def parse_model(d, ch, verbose=True):
             c2 = args[1] if args[3] else args[1] * 4
         elif m is torch.nn.BatchNorm2d:
             args = [ch[f]]
-        elif m is MFC:
-            c2 = args[0]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
         elif m in frozenset(

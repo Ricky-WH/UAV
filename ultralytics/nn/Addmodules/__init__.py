@@ -1,2 +1,1 @@
-from .MFC import *
-from .DHDetect import *
+from .AFDetect import *

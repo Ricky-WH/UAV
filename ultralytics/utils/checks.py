@@ -186,33 +186,6 @@ def check_version(
     verbose: bool = False,
     msg: str = "",
 ) -> bool:
-    """
-    Check current version against the required version or range.
-
-    Args:
-        current (str): Current version or package name to get version from.
-        required (str): Required version or range (in pip-style format).
-        name (str): Name to be used in warning message.
-        hard (bool): If True, raise an AssertionError if the requirement is not met.
-        verbose (bool): If True, print warning message if requirement is not met.
-        msg (str): Extra message to display if verbose.
-
-    Returns:
-        (bool): True if requirement is met, False otherwise.
-
-    Examples:
-        Check if current version is exactly 22.04
-        >>> check_version(current="22.04", required="==22.04")
-
-        Check if current version is greater than or equal to 22.04
-        >>> check_version(current="22.10", required="22.04")  # assumes '>=' inequality if none passed
-
-        Check if current version is less than or equal to 22.04
-        >>> check_version(current="22.04", required="<=22.04")
-
-        Check if current version is between 20.04 (inclusive) and 22.04 (exclusive)
-        >>> check_version(current="21.10", required=">20.04,<22.04")
-    """
     if not current:  # if current is '' or None
         LOGGER.warning(f"invalid check_version({current}, {required}) requested, please check values.")
         return True

@@ -1,0 +1,13 @@
+path: /Users/ricky-hang/study/Research/Anti-UAV/datasets/datasets/DUT-Anti-UAV/
+
+train:
+  - images/train
+
+val:
+  - images/val
+
+test:
+  - images/test
+
+nc: 1
+names: ['UAV']
