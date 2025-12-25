@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import glob
 import random
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import cv2
 import numpy as np
@@ -36,7 +36,7 @@ def _gather_files(paths: str | Iterable[str]) -> list[str]:
             if path.suffix[1:].lower() in IMG_FORMATS:
                 files.append(str(path))
             else:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     for line in f:
                         candidate = line.strip()
                         if candidate and Path(candidate).suffix[1:].lower() in IMG_FORMATS:
@@ -150,7 +150,7 @@ class SemiSupervisionHelper:
         self.unlabeled_bs = (
             int(trainer.args.semi_unlabeled_batch)
             if trainer.args.semi_unlabeled_batch > 0
-            else max(1, int(round(trainer.batch_size * trainer.args.semi_ratio)))
+            else max(1, round(trainer.batch_size * trainer.args.semi_ratio))
         )
         self.term_count = 4
         self.feature_layers = trainer.args.semi_feature_layers or [0]
@@ -236,11 +236,11 @@ class SemiSupervisionHelper:
         if not bboxes.numel():
             return heatmaps
         for box, img_idx in zip(bboxes, idxs):
-            cx, cy, bw, bh = box.tolist()
+            cx, cy, _bw, _bh = box.tolist()
             for heat in heatmaps:
                 h, w = heat.shape[2:]
                 sigma = self.args.semi_point_sigma
-                radius = max(1, int(round(3 * sigma)))
+                radius = max(1, round(3 * sigma))
                 cx_cell = cx * w
                 cy_cell = cy * h
                 self._draw_gaussian(heat[img_idx, 0], cx_cell, cy_cell, radius, sigma)
@@ -336,7 +336,7 @@ class SemiSupervisionHelper:
         student_lvl = student_feats[level]
         teacher_lvl = teacher_feats[level].detach()
         teacher_center = self._center_maps_from_logits(teacher_logits)[level].detach()
-        bs, c, h, w = student_lvl.shape
+        bs, c, _h, _w = student_lvl.shape
         student_flat = student_lvl.permute(0, 2, 3, 1).reshape(bs, -1, c)
         teacher_flat = teacher_lvl.permute(0, 2, 3, 1).reshape(bs, -1, c)
         center_flat = teacher_center.view(bs, -1)
