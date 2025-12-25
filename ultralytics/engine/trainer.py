@@ -413,7 +413,7 @@ class BaseTrainer:
                     batch = self.preprocess_batch(batch)
                     # decouple inference and loss calculations for torch.compile convenience
                     preds = self.model(batch["img"])
-                    loss, self.loss_items = unwrap_model(self.model).loss(batch, preds)
+                    loss, self.loss_items = self.compute_loss(batch, preds)
                     self.loss = loss.sum()
                     if RANK != -1:
                         self.loss *= world_size
@@ -671,6 +671,10 @@ class BaseTrainer:
     def preprocess_batch(self, batch):
         """Allow custom preprocessing model inputs and ground truths depending on task type."""
         return batch
+
+    def compute_loss(self, batch, preds):
+        """Compute supervised loss for a batch. Subclasses may override to inject auxiliary objectives."""
+        return unwrap_model(self.model).loss(batch, preds)
 
     def validate(self):
         """

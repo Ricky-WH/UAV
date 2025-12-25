@@ -14,6 +14,7 @@ import torch.nn as nn
 from ultralytics.data import build_dataloader, build_yolo_dataset
 from ultralytics.engine.trainer import BaseTrainer
 from ultralytics.models import yolo
+from ultralytics.models.yolo.detect.semi import SemiSupervisionHelper
 from ultralytics.nn.tasks import DetectionModel
 from ultralytics.utils import DEFAULT_CFG, LOGGER, RANK
 from ultralytics.utils.patches import override_configs
@@ -64,6 +65,8 @@ class DetectionTrainer(BaseTrainer):
             _callbacks (list, optional): List of callback functions to be executed during training.
         """
         super().__init__(cfg, overrides, _callbacks)
+        self.semi_helper = None
+        self.semi_enabled = bool(getattr(self.args, "semi", False))
 
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
         """
@@ -169,10 +172,37 @@ class DetectionTrainer(BaseTrainer):
 
     def get_validator(self):
         """Return a DetectionValidator for YOLO model validation."""
-        self.loss_names = "box_loss", "cls_loss", "dfl_loss"
+        base_loss_names = ["box_loss", "cls_loss", "dfl_loss"]
+        if getattr(self, "semi_enabled", False):
+            base_loss_names += ["point_loss", "feat_kd_loss", "distill_box_loss", "contrast_loss"]
+        self.loss_names = tuple(base_loss_names)
         return yolo.detect.DetectionValidator(
             self.test_loader, save_dir=self.save_dir, args=copy(self.args), _callbacks=self.callbacks
         )
+
+    def _setup_train(self, world_size):
+        super()._setup_train(world_size)
+        if self.semi_enabled:
+            unlabeled = self.data.get("unlabeled")
+            if not unlabeled:
+                LOGGER.warning("'semi=True' requested but data.yaml has no 'unlabeled' split. Disabling semi losses.")
+                self.semi_enabled = False
+                return
+            self.semi_helper = SemiSupervisionHelper(self)
+            if not self.semi_helper:
+                LOGGER.warning("Semi-supervised helper failed to initialize; disabling semi losses.")
+                self.semi_enabled = False
+
+    def compute_loss(self, batch, preds):
+        loss, loss_items = super().compute_loss(batch, preds)
+        if not self.semi_helper:
+            return loss, loss_items
+        extra = self.semi_helper.compute(batch, preds)
+        if extra.device != loss.device:
+            extra = extra.to(loss.device)
+        loss = torch.cat((loss, extra))
+        loss_items = torch.cat((loss_items, extra.detach()))
+        return loss, loss_items
 
     def label_loss_items(self, loss_items: list[float] | None = None, prefix: str = "train"):
         """

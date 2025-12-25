@@ -61,7 +61,7 @@ class AFDetect(Detect):
                 # Feature fusion using attention mechanism
                 cls_feat = self.cls_convs[i][:-1](x[i])
                 reg_feat = self.reg_convs[i][:-1](x[i])
-                
+
                 cls_attn = self.cls_attention[i](cls_feat)
                 reg_attn = self.reg_attention[i](reg_feat)
                 
@@ -83,7 +83,6 @@ class AFDetect(Detect):
         return y if self.export else (y, x)
 
     def bias_init(self):
-        """Initialize biases for better training stability."""
         for m in self.cls_convs:
             final_layer = m[-1]
             final_layer.bias.data[:] = math.log(5 / self.nc / (640 / 32) ** 2)

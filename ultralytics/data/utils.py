@@ -442,7 +442,7 @@ def check_det_dataset(dataset: str, autodownload: bool = True) -> dict[str, Any]
 
     # Set paths
     data["path"] = path  # download scripts
-    for k in "train", "val", "test", "minival":
+    for k in "train", "val", "test", "minival", "unlabeled":
         if data.get(k):  # prepend path
             if isinstance(data[k], str):
                 x = (path / data[k]).resolve()

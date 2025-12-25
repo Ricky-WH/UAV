@@ -59,6 +59,8 @@ class Detect(nn.Module):
             )
         )
         self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
+        self.save_input_features = False
+        self.cached_inputs: list[torch.Tensor] | None = None
 
         if self.end2end:
             self.one2one_cv2 = copy.deepcopy(self.cv2)
@@ -69,6 +71,13 @@ class Detect(nn.Module):
         if self.end2end:
             return self.forward_end2end(x)
 
+        if self.save_input_features:
+            cache = []
+            for feat in x:
+                cache.append(feat.clone() if self.training else feat.detach().clone())
+            self.cached_inputs = cache
+        else:
+            self.cached_inputs = None
         for i in range(self.nl):
             x[i] = torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1)
         if self.training:  # Training path

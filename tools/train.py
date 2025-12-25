@@ -1,6 +1,4 @@
 from ultralytics import YOLO
-import sys
-sys.path.append('/root/Anti-UAV/ultralytics')
 
 if __name__ == '__main__':
     # 加载模型
@@ -8,21 +6,20 @@ if __name__ == '__main__':
     # model = YOLO(r'yolov8.yaml').load("yolov8n.pt")  # 使用预训练权重训练
     # 训练参数 ----------------------------------------------------------------------------------------------
     model.train(
-        data=r'/Users/ricky-hang/study/Anti-UAV/Anti-UAV/datasets/DUT-Anti-UAV.yaml',
+        data=r'/Users/ricky-hang/study/Research/Anti-UAV/Anti-UAV/datasets/DUT-Anti-UAV.yaml',
         epochs=300,  # (int) 训练的周期数
+        patience=50,  # (int) 等待无明显改善以进行早期停止的周期数
         batch=32,  # (int) 每批次的图像数量（-1 为自动批处理）
         imgsz=640,  # (int) 输入图像的大小，整数或w，h
-        device='',  # (int | str | list, optional) 运行的设备，例如 cuda device=0 或 device=0,1,2,3 或 device=cpu
-        close_mosaic=0,  # (int) 在最后几个周期禁用马赛克增强
-        project='runs/train',  # (str, optional) 项目名称
-        name='AFNet',  # (str, optional) 实验名称，结果保存在'project/name'目录下
-        patience=50,  # (int) 等待无明显改善以进行早期停止的周期数
-        pretrained=True,  # (bool | str) 是否使用预训练模型（bool），或从中加载权重的模型（str）
         save=True,  # (bool) 保存训练检查点和预测结果
         save_period=-1,  # (int) 每x周期保存检查点（如果小于1则禁用）
         cache=False,  # disk 硬盘，速度稍快精度可复现；ram/True 内存，速度快但精度不复现
+        device='',  # (int | str | list, optional) 运行的设备，例如 cuda device=0 或 device=0,1,2,3 或 device=cpu
         workers=8,  # (int) 数据加载的工作线程数（每个DDP进程）
+        project='runs/train',  # (str, optional) 项目名称
+        name='AFNet_SS',  # (str, optional) 实验名称，结果保存在'project/name'目录下
         exist_ok=False,  # (bool) 是否覆盖现有实验
+        pretrained=True,  # (bool | str) 是否使用预训练模型（bool），或从中加载权重的模型（str）
         optimizer='SGD',  # (str) 要使用的优化器，选择=[SGD，Adam，Adamax，AdamW，NAdam，RAdam，RMSProp，auto]
         verbose=True,  # (bool) 是否打印详细输出
         seed=0,  # (int) 用于可重复性的随机种子
@@ -30,6 +27,7 @@ if __name__ == '__main__':
         single_cls=False,  # (bool) 将多类数据训练为单类
         rect=False,  # (bool) 如果mode='train'，则进行矩形训练，如果mode='val'，则进行矩形验证
         cos_lr=False,  # (bool) 使用余弦学习率调度器
+        close_mosaic=0,  # (int) 在最后几个周期禁用马赛克增强
         resume=False,  # (bool) 从上一个检查点恢复训练
         amp=False,  # (bool) 自动混合精度（AMP）训练，选择=[True, False]，True运行AMP检查
         fraction=1.0,  # (float) 要训练的数据集分数（默认为1.0，训练集中的所有图像）/子集训练策略
@@ -68,5 +66,26 @@ if __name__ == '__main__':
         mosaic=1.0,  # (float) 图像马赛克（概率）
         mixup=0.0,  # (float) 图像混合（概率）
         copy_paste=0.0,  # (float) 分割复制-粘贴（概率）
+        # 半监督 ----------------------------------------------------------------------------------------------------------
+        semi=True,  # (bool) 启用 teacher-student 半监督训练
+        semi_unlabeled_batch=16,  # (int) 每次迭代使用的无标签 batch 大小
+        semi_ratio=1.0,  # (float) unlabeled batch 相对 labeled batch 的比例
+        semi_point_weight=1.0,  # (float) 点监督损失权重
+        semi_feature_weight=0.5,  # (float) 多尺度特征蒸馏损失权重
+        semi_distill_weight=0.5,  # (float) 分布式框回归损失权重
+        semi_contrast_weight=0.2,  # (float) 背景对比学习损失权重
+        semi_pseudo_conf=0.4,  # (float) Teacher 伪框置信度阈值
+        semi_pseudo_iou=0.5,  # (float) Teacher 伪框 NMS IoU 阈值
+        semi_point_sigma=2.0,  # (float) 点监督热力图的 Gaussian sigma
+        semi_feature_layers=[0, 1],  # (list[int]) 进行特征蒸馏的层索引
+        semi_contrast_temperature=0.07,  # (float) InfoNCE 温度
+        semi_pos_threshold=0.6,
+        semi_neg_low=0.05,
+        semi_neg_high=0.3,
+        semi_max_pos=32,
+        semi_max_neg=96,
+        semi_color_jitter=0.4,
+        semi_noise_std=8.0,
+        semi_cutout=0.4,
+        semi_blur=0.15,
     )
-
