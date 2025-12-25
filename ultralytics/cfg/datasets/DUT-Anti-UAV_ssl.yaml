@@ -1,0 +1,10 @@
+# Semi-supervised dataset config that uses the split labeled/unlabeled lists
+path: /Users/ricky-hang/study/Research/Anti-UAV/datasets/DUT-Anti-UAV/
+
+train: splits/train_labeled.txt
+val: images/val
+test: images/test
+unlabeled: splits/train_unlabeled.txt
+
+nc: 1
+names: ['UAV']

@@ -2,12 +2,19 @@ from pathlib import Path
 
 from ultralytics import YOLO
 from ultralytics.data.split import split_semisupervised_yolo
+from ultralytics.utils import YAML
 
 if __name__ == '__main__':
     # 加载模型
     model = YOLO(r'/Users/ricky-hang/study/Research/Anti-UAV/Anti-UAV/ultralytics/cfg/models/11/AFNet.yaml', task="detect")  # 不使用预训练权重训练 | detect, segment, classify, pose, obb
     # model = YOLO(r'yolov8.yaml').load("yolov8n.pt")  # 使用预训练权重训练
-    dataset_root = Path(r'/Users/ricky-hang/study/Research/Anti-UAV/datasets/DUT-Anti-UAV')
+    data_cfg = Path(r'/Users/ricky-hang/study/Research/Anti-UAV/Anti-UAV/datasets/DUT-Anti-UAV_ssl.yaml').resolve()
+    data_dict = YAML().load(data_cfg)
+    dataset_root = Path(data_dict.get('path') or data_cfg.parent)
+    if not dataset_root.is_absolute():
+        dataset_root = (data_cfg.parent / dataset_root).resolve()
+    else:
+        dataset_root = dataset_root.resolve()
     # 训练前先自动按照 1:3 划分有标签/无标签数据，生成 splits/train_labeled.txt & train_unlabeled.txt
     split_semisupervised_yolo(
         dataset_root,
@@ -18,7 +25,7 @@ if __name__ == '__main__':
     )
     # 训练参数 ----------------------------------------------------------------------------------------------
     model.train(
-        data=r'/Users/ricky-hang/study/Research/Anti-UAV/Anti-UAV/datasets/DUT-Anti-UAV_ssl.yaml',
+        data=str(data_cfg),
         epochs=300,  # (int) 训练的周期数
         patience=50,  # (int) 等待无明显改善以进行早期停止的周期数
         batch=32,  # (int) 每批次的图像数量（-1 为自动批处理）

@@ -216,7 +216,15 @@ class BaseValidator:
             # Loss
             with dt[2]:
                 if self.training:
-                    self.loss += model.loss(batch, preds)[1]
+                    batch_loss = model.loss(batch, preds)[1]
+                    if batch_loss.shape != self.loss.shape:
+                        diff = self.loss.shape[0] - batch_loss.shape[0]
+                        if diff > 0:
+                            pad = torch.zeros(diff, device=batch_loss.device, dtype=batch_loss.dtype)
+                            batch_loss = torch.cat((batch_loss, pad))
+                        else:
+                            batch_loss = batch_loss[: self.loss.shape[0]]
+                    self.loss += batch_loss
 
             # Postprocess
             with dt[3]:
