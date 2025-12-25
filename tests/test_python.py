@@ -350,6 +350,32 @@ def test_data_utils():
     zip_directory(TMP / "coco8/images/val")  # zip
 
 
+@pytest.mark.skipif(not IS_TMP_WRITEABLE, reason="directory is not writeable")
+def test_split_semisupervised_yolo():
+    """Ensure labeled/unlabeled YOLO splits follow the requested ratio and path formatting."""
+    from ultralytics.data.split import split_semisupervised_yolo
+
+    root = TMP / "toy_yolo_split"
+    img_dir = root / "images/train"
+    lbl_dir = root / "labels/train"
+    img_dir.mkdir(parents=True, exist_ok=True)
+    lbl_dir.mkdir(parents=True, exist_ok=True)
+
+    for i in range(8):
+        (img_dir / f"{i:05d}.jpg").write_bytes(b"0")
+        (lbl_dir / f"{i:05d}.txt").write_text("0 0.5 0.5 0.1 0.1\n", encoding="utf-8")
+
+    labeled_txt, unlabeled_txt = split_semisupervised_yolo(root, ratio=(1, 3), seed=42, absolute_paths=False)
+
+    labeled = [line for line in labeled_txt.read_text().splitlines() if line]
+    unlabeled = [line for line in unlabeled_txt.read_text().splitlines() if line]
+
+    assert len(labeled) == 2  # 1:3 ratio on 8 images
+    assert len(unlabeled) == 6
+    assert set(labeled).isdisjoint(set(unlabeled))
+    assert all(path.startswith("images/train/") for path in labeled + unlabeled)
+
+
 @pytest.mark.skipif(not ONLINE, reason="environment is offline")
 def test_data_converter():
     """Test dataset conversion functions from COCO to YOLO format and class mappings."""
