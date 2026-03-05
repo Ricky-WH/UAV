@@ -23,11 +23,10 @@ from ultralytics.utils.torch_utils import torch_distributed_zero_first, unwrap_m
 
 
 class DetectionTrainer(BaseTrainer):
-    """
-    A class extending the BaseTrainer class for training based on a detection model.
+    """A class extending the BaseTrainer class for training based on a detection model.
 
-    This trainer specializes in object detection tasks, handling the specific requirements for training YOLO models
-    for object detection including dataset building, data loading, preprocessing, and model configuration.
+    This trainer specializes in object detection tasks, handling the specific requirements for training YOLO models for
+    object detection including dataset building, data loading, preprocessing, and model configuration.
 
     Attributes:
         model (DetectionModel): The YOLO detection model being trained.
@@ -56,8 +55,7 @@ class DetectionTrainer(BaseTrainer):
     """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides: dict[str, Any] | None = None, _callbacks=None):
-        """
-        Initialize a DetectionTrainer object for training YOLO object detection model training.
+        """Initialize a DetectionTrainer object for training YOLO object detection model training.
 
         Args:
             cfg (dict, optional): Default configuration dictionary containing training parameters.
@@ -69,8 +67,7 @@ class DetectionTrainer(BaseTrainer):
         self.semi_enabled = bool(getattr(self.args, "semi", False))
 
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
-        """
-        Build YOLO Dataset for training or validation.
+        """Build YOLO Dataset for training or validation.
 
         Args:
             img_path (str): Path to the folder containing images.
@@ -84,8 +81,7 @@ class DetectionTrainer(BaseTrainer):
         return build_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
-        """
-        Construct and return dataloader for the specified mode.
+        """Construct and return dataloader for the specified mode.
 
         Args:
             dataset_path (str): Path to the dataset.
@@ -113,8 +109,7 @@ class DetectionTrainer(BaseTrainer):
         )
 
     def preprocess_batch(self, batch: dict) -> dict:
-        """
-        Preprocess a batch of images by scaling and converting to float.
+        """Preprocess a batch of images by scaling and converting to float.
 
         Args:
             batch (dict): Dictionary containing batch data with 'img' tensor.
@@ -154,8 +149,7 @@ class DetectionTrainer(BaseTrainer):
         # TODO: self.model.class_weights = labels_to_class_weights(dataset.labels, nc).to(device) * nc
 
     def get_model(self, cfg: str | None = None, weights: str | None = None, verbose: bool = True):
-        """
-        Return a YOLO detection model.
+        """Return a YOLO detection model.
 
         Args:
             cfg (str, optional): Path to model configuration file.
@@ -205,8 +199,7 @@ class DetectionTrainer(BaseTrainer):
         return loss, loss_items
 
     def label_loss_items(self, loss_items: list[float] | None = None, prefix: str = "train"):
-        """
-        Return a loss dict with labeled training loss items tensor.
+        """Return a loss dict with labeled training loss items tensor.
 
         Args:
             loss_items (list[float], optional): List of loss values.
@@ -233,8 +226,7 @@ class DetectionTrainer(BaseTrainer):
         )
 
     def plot_training_samples(self, batch: dict[str, Any], ni: int) -> None:
-        """
-        Plot training samples with their annotations.
+        """Plot training samples with their annotations.
 
         Args:
             batch (dict[str, Any]): Dictionary containing batch data.
@@ -258,8 +250,7 @@ class DetectionTrainer(BaseTrainer):
         plot_labels(boxes, cls.squeeze(), names=self.data["names"], save_dir=self.save_dir, on_plot=self.on_plot)
 
     def auto_batch(self):
-        """
-        Get optimal batch size by calculating memory occupation of model.
+        """Get optimal batch size by calculating memory occupation of model.
 
         Returns:
             (int): Optimal batch size.

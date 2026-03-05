@@ -7,4 +7,4 @@ test: images/test
 unlabeled: splits/train_unlabeled.txt
 
 nc: 1
-names: ['UAV']
+names: ["UAV"]
