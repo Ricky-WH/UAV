@@ -10,4 +10,4 @@ test:
   - images/test
 
 nc: 1
-names: ['UAV']
+names: ["UAV"]
